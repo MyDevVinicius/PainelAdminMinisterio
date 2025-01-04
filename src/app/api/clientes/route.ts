@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
     FOREIGN KEY (membro_id) 
     REFERENCES ${nome_banco}.membros(id)
     ON DELETE SET NULL,
-  CONSTRAINT fk_usuario
+  CONSTRAINT fk_usuario_entrada
     FOREIGN KEY (usuario_id) 
     REFERENCES ${nome_banco}.usuarios(id)
     ON DELETE CASCADE
@@ -195,35 +195,36 @@ export async function POST(req: NextRequest) {
     )`;
     await conn.query(createContasTableQuery);
 
-    // Criar tabela de saídas
-    const createExitTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.saida (
+    // Criar tabela de saídas com relação a contas_a_pagar
+    const createSaidasTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.saida (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  observacao VARCHAR(255),
   tipo ENUM('Pagamento', 'Salario', 'Ajuda de Custo') NOT NULL,
-  forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
+  observacao VARCHAR(255),
   valor DECIMAL(10, 2) NOT NULL,
+  forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
   data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  conta_id INT,
-  usuario_id INT NOT NULL, -- ID do usuário que fez o lançamento
-  CONSTRAINT fk_conta_id 
+  conta_id INT NULL,
+  usuario_id INT NOT NULL,
+  CONSTRAINT fk_conta_saida
     FOREIGN KEY (conta_id) 
-    REFERENCES ${nome_banco}.contas_a_pagar(id) 
+    REFERENCES ${nome_banco}.contas_a_pagar(id)
     ON DELETE CASCADE,
-  CONSTRAINT fk_usuario 
+  CONSTRAINT fk_usuario_saida
     FOREIGN KEY (usuario_id) 
-    REFERENCES ${nome_banco}.usuarios(id) 
+    REFERENCES ${nome_banco}.usuarios(id)
     ON DELETE CASCADE
 )`;
 
-    await conn.query(createExitTableQuery);
+    await conn.query(createSaidasTableQuery);
 
-    return NextResponse.json({
-      message: "Cliente, banco e permissões configurados com sucesso!",
-    });
-  } catch (error) {
-    console.error("Erro ao criar cliente ou banco:", error);
     return NextResponse.json(
-      { message: "Erro ao criar cliente ou banco." },
+      { message: "Cliente cadastrado com sucesso!" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Erro no cadastro do cliente: ", error);
+    return NextResponse.json(
+      { message: "Erro interno do servidor. Tente novamente." },
       { status: 500 }
     );
   } finally {
