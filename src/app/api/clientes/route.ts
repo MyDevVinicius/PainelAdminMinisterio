@@ -162,20 +162,25 @@ export async function POST(req: NextRequest) {
     )`;
     await conn.query(createMembersTableQuery);
 
-    // Criar tabela de entradas com relacionamento a membros
     const createEntryTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.entrada (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      observacao VARCHAR(255),
-      tipo ENUM('Dizimo', 'Oferta', 'Doacao', 'Campanha') NOT NULL,
-      forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
-      valor DECIMAL(10, 2) NOT NULL,
-      data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      membro_id INT NULL,
-      CONSTRAINT fk_membro
-        FOREIGN KEY (membro_id) 
-        REFERENCES ${nome_banco}.membros(id)
-        ON DELETE SET NULL
-    )`;
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  observacao VARCHAR(255),
+  tipo ENUM('Dizimo', 'Oferta', 'Doacao', 'Campanha') NOT NULL,
+  forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
+  valor DECIMAL(10, 2) NOT NULL,
+  data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  membro_id INT NULL,
+  usuario_id INT NOT NULL, -- ID do usuário que fez o lançamento
+  CONSTRAINT fk_membro
+    FOREIGN KEY (membro_id) 
+    REFERENCES ${nome_banco}.membros(id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_usuario
+    FOREIGN KEY (usuario_id) 
+    REFERENCES ${nome_banco}.usuarios(id)
+    ON DELETE CASCADE
+)`;
+
     await conn.query(createEntryTableQuery);
 
     // Criar tabela de contas a pagar
@@ -192,15 +197,24 @@ export async function POST(req: NextRequest) {
 
     // Criar tabela de saídas
     const createExitTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.saida (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      observacao VARCHAR(255),
-      tipo ENUM('Pagamento', 'Salario', 'Ajuda de Custo') NOT NULL,
-      forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
-      valor DECIMAL(10, 2) NOT NULL,
-      data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      conta_id INT,
-      CONSTRAINT fk_conta_id FOREIGN KEY (conta_id) REFERENCES ${nome_banco}.contas_a_pagar(id) ON DELETE CASCADE
-    )`;
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  observacao VARCHAR(255),
+  tipo ENUM('Pagamento', 'Salario', 'Ajuda de Custo') NOT NULL,
+  forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
+  valor DECIMAL(10, 2) NOT NULL,
+  data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  conta_id INT,
+  usuario_id INT NOT NULL, -- ID do usuário que fez o lançamento
+  CONSTRAINT fk_conta_id 
+    FOREIGN KEY (conta_id) 
+    REFERENCES ${nome_banco}.contas_a_pagar(id) 
+    ON DELETE CASCADE,
+  CONSTRAINT fk_usuario 
+    FOREIGN KEY (usuario_id) 
+    REFERENCES ${nome_banco}.usuarios(id) 
+    ON DELETE CASCADE
+)`;
+
     await conn.query(createExitTableQuery);
 
     return NextResponse.json({
