@@ -155,10 +155,12 @@ export async function POST(req: NextRequest) {
     // Criar tabela de membros
     const createMembersTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.membros (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      nome VARCHAR(255) NOT NULL,
-      data_nascimento DATE,
-      endereco VARCHAR(255),
-      status ENUM('ativo', 'inativo') NOT NULL
+    nome VARCHAR(255) NOT NULL,
+    data_nascimento DATE NULL,
+    endereco VARCHAR(255) NULL,
+    status ENUM('ativo', 'inativo') NOT NULL,
+    numero VARCHAR(15) NULL,
+    email VARCHAR(255) NULL
     )`;
     await conn.query(createMembersTableQuery);
 
