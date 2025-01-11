@@ -183,38 +183,24 @@ export async function POST(req: NextRequest) {
 
     await conn.query(createEntryTableQuery);
 
-    // Criar tabela de contas a pagar
-    const createContasTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.contas_a_pagar (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      observacao VARCHAR(255) NOT NULL,
-      valor DECIMAL(10,2) NOT NULL,
-      valor_pago DECIMAL(10,2) NOT NULL,
-      status ENUM('Pago', 'Pendente', 'Pago Parcial', 'Vencida'),
-      data_vencimento DATE,
-      data_pagamento DATE DEFAULT NULL
-    )`;
-    await conn.query(createContasTableQuery);
-
-    // Criar tabela de saídas com relação a contas_a_pagar
+    // Criar tabela de saídas (consolidada com os dados de contas a pagar)
     const createSaidasTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.saida (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  tipo ENUM('Pagamento', 'Salario', 'Ajuda de Custo') NOT NULL,
+  tipo ENUM('Pagamento', 'Salario', 'Ajuda de Custo', 'Dizimo', 'Oferta', 'Doacao', 'Campanha') NOT NULL,
   observacao VARCHAR(255),
   valor DECIMAL(10, 2) NOT NULL,
+  valor_pago DECIMAL(10, 2),
+  status ENUM('Pago', 'Pendente', 'Pago Parcial', 'Vencida') DEFAULT 'Pendente',
   forma_pagamento ENUM('Dinheiro', 'PIX', 'Debito', 'Credito'),
   data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  conta_id INT NULL,
+  data_vencimento DATE DEFAULT NULL,
+  data_pagamento DATE DEFAULT NULL,
   usuario_id INT NOT NULL,
-  CONSTRAINT fk_conta_saida
-    FOREIGN KEY (conta_id) 
-    REFERENCES ${nome_banco}.contas_a_pagar(id)
-    ON DELETE CASCADE,
   CONSTRAINT fk_usuario_saida
     FOREIGN KEY (usuario_id) 
     REFERENCES ${nome_banco}.usuarios(id)
     ON DELETE CASCADE
 )`;
-
     await conn.query(createSaidasTableQuery);
 
     return NextResponse.json(
