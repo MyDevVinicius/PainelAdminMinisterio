@@ -11,10 +11,12 @@ export async function GET(request: Request) {
   // Aqui vamos assumir que você tem uma forma de pegar o ID do usuário logado, por exemplo, com uma session ou um token
   const userId = 1; // Substitua por sua lógica de pegar o usuário logado (token JWT, session, etc.)
 
-  // Consulta SQL para pegar o nome do usuário baseado no ID
+  let conn;
   try {
-    // Usar db.query para pegar diretamente o resultado da consulta
-    const [rows] = (await db.query("SELECT nome FROM usuarios WHERE id = ?", [
+    conn = await db.getConnection();
+
+    // Consulta SQL para pegar o nome do usuário baseado no ID
+    const [rows] = (await conn.query("SELECT nome FROM usuarios WHERE id = ?", [
       userId,
     ])) as [Usuario[], any]; // Garantir que o tipo do retorno seja [Usuario[], any]
 
@@ -33,5 +35,9 @@ export async function GET(request: Request) {
       { message: "Erro ao buscar o usuário" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }

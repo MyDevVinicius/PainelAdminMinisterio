@@ -83,7 +83,8 @@ export async function POST(req: NextRequest) {
 
     // Configurações adicionais do banco de dados
     await conn.query(`SET GLOBAL max_connections = 1000`); // Define o limite de conexões
-    await conn.query(`SET GLOBAL wait_timeout = 120`); // Define o tempo para fechamento de conexões inativas (2 minutos)
+    await conn.query(`SET GLOBAL wait_timeout = 10`); // Define o tempo para fechamento de conexões inativas (10 segundos)
+    await conn.query(`SET GLOBAL interactive_timeout = 10`); // Define o tempo de inatividade para conexões interativas (10 segundos)
 
     // Criar tabela de usuários
     const createTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.usuarios (
@@ -154,13 +155,14 @@ export async function POST(req: NextRequest) {
 
     // Criar tabela de membros
     const createMembersTableQuery = `CREATE TABLE IF NOT EXISTS ${nome_banco}.membros (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    data_nascimento DATE NULL,
-    endereco VARCHAR(255) NULL,
-    status ENUM('ativo', 'inativo') NOT NULL,
-    numero VARCHAR(15) NULL,
-    email VARCHAR(255) NULL
+       id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(255) NOT NULL,
+  data_nascimento DATE,
+  endereco VARCHAR(255),
+  status ENUM('ativo', 'inativo') NOT NULL,
+  numero VARCHAR(15),
+  email VARCHAR(255),
+  imagem LONGBLOB
     )`;
     await conn.query(createMembersTableQuery);
 

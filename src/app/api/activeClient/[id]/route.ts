@@ -7,6 +7,8 @@ export async function PUT(
 ) {
   const { id } = params;
 
+  let conn;
+
   try {
     const { status } = await req.json();
 
@@ -18,13 +20,11 @@ export async function PUT(
       );
     }
 
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Atualizar o status do cliente no banco de dados
     const updateQuery = "UPDATE clientes SET status = ? WHERE id = ?";
-    const [result] = await conn.query(updateQuery, [status, id]);
-
-    conn.release();
+    const [result]: any = await conn.query(updateQuery, [status, id]);
 
     // Verifica se o cliente foi encontrado e o status atualizado
     if (result.affectedRows === 0) {
@@ -44,5 +44,11 @@ export async function PUT(
       { message: "Erro interno no servidor!" },
       { status: 500 }
     );
+  } finally {
+    // Certifica-se de que a conexão será liberada
+    if (conn) {
+      conn.release();
+      console.log("Conexão com o banco de dados liberada.");
+    }
   }
 }

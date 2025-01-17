@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/mysql";
 import bcrypt from "bcryptjs";
+import { RowDataPacket } from "mysql2";
 
 // Definir a tipagem da resposta para a consulta do banco
-interface Usuario {
+interface Usuario extends RowDataPacket {
   id: number;
   nome: string;
   email: string;
@@ -22,8 +23,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Tipar corretamente o resultado da consulta
     const [rows] = await conn.query<Usuario[]>(
@@ -58,8 +60,12 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { message: "Erro ao fazer login!" },
+      { message: "Erro ao fazer login!", error: (error as Error).message },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }

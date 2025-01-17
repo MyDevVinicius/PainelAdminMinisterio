@@ -5,6 +5,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let conn;
   try {
     // Pega o ID do parâmetro da URL
     const { id } = params;
@@ -23,6 +24,8 @@ export async function PUT(
       );
     }
 
+    conn = await pool.getConnection();
+
     // Atualização no banco de dados
     const query = `
       UPDATE usuarios
@@ -32,7 +35,7 @@ export async function PUT(
     const values = [nome, email, senha, id];
 
     // Executa a query no banco de dados usando o pool de conexões
-    const [result] = await pool.execute(query, values);
+    const [result]: any = await conn.execute(query, values);
 
     // Verifica se a atualização foi bem-sucedida
     if (result.affectedRows === 0) {
@@ -53,5 +56,9 @@ export async function PUT(
       { message: "Erro ao atualizar usuário!" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }

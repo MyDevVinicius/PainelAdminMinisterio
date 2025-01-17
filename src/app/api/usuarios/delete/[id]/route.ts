@@ -14,16 +14,15 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Deletar o usuário com o ID especificado
     const [result]: any = await conn.query(
       "DELETE FROM usuarios WHERE id = ?",
       [id]
     );
-
-    conn.release();
 
     // Se o usuário não for encontrado, retorna erro
     if (result.affectedRows === 0) {
@@ -43,5 +42,9 @@ export async function DELETE(req: NextRequest) {
       { message: "Erro ao excluir usuário!" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }

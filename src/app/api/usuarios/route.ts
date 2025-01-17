@@ -2,9 +2,10 @@
 import { NextRequest, NextResponse } from "next/server"; // Importações essenciais
 import pool from "@/lib/mysql"; // Importação da conexão com o MySQL
 import bcrypt from "bcryptjs"; // Para hashing e comparação de senhas
+import { RowDataPacket, ResultSetHeader } from "mysql2"; // Importar os tipos corretos do mysql2
 
 // Tipagem do usuário
-interface Usuario {
+interface Usuario extends RowDataPacket {
   id: number;
   nome: string;
   email: string;
@@ -39,11 +40,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Verificar se o usuário já existe
-    const [rows]: any[] = await conn.query(
+    const [rows] = await conn.query<Usuario[]>(
       "SELECT * FROM usuarios WHERE email = ?",
       [email]
     );
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(senha, 10);
 
     // Inserir o novo usuário no banco de dados
-    const [result] = await conn.query(
+    const [result] = await conn.query<ResultSetHeader>(
       "INSERT INTO usuarios (nome, email, senha, role) VALUES (?, ?, ?, ?)",
       [nome, email, hashedPassword, role]
     );
@@ -74,6 +76,10 @@ export async function POST(req: NextRequest) {
       { message: "Erro ao cadastrar usuário!" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }
 
@@ -109,8 +115,9 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Construção da consulta para atualizar os dados do usuário
     let query = "UPDATE usuarios SET nome = ?, email = ?, role = ?";
@@ -127,7 +134,7 @@ export async function PUT(req: NextRequest) {
     params.push(id);
 
     // Executa a consulta
-    const [result] = await conn.query(query, params);
+    const [result] = await conn.query<ResultSetHeader>(query, params);
 
     if (result.affectedRows === 0) {
       return NextResponse.json(
@@ -146,6 +153,10 @@ export async function PUT(req: NextRequest) {
       { message: "Erro ao atualizar usuário!" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }
 
@@ -161,13 +172,15 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
     // Excluir o usuário pelo ID
-    const [result] = await conn.query("DELETE FROM usuarios WHERE id = ?", [
-      id,
-    ]);
+    const [result] = await conn.query<ResultSetHeader>(
+      "DELETE FROM usuarios WHERE id = ?",
+      [id]
+    );
 
     if (result.affectedRows === 0) {
       return NextResponse.json(
@@ -186,5 +199,9 @@ export async function DELETE(req: NextRequest) {
       { message: "Erro ao excluir usuário!" },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+    }
   }
 }

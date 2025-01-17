@@ -7,6 +7,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let conn;
+
   try {
     const { id } = params;
 
@@ -53,107 +55,102 @@ export async function PUT(
       );
     }
 
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
 
-    try {
-      // Verifica se o cliente existe e obtém o nome do banco de dados
-      const getClienteQuery =
-        "SELECT nome_banco, status FROM clientes WHERE id = ?";
-      const [clientes]: any[] = await conn.query(getClienteQuery, [id]);
+    // Verifica se o cliente existe e obtém o nome do banco de dados
+    const getClienteQuery =
+      "SELECT nome_banco, status FROM clientes WHERE id = ?";
+    const [clientes]: any[] = await conn.query(getClienteQuery, [id]);
 
-      if (!clientes || clientes.length === 0) {
-        return NextResponse.json(
-          { message: "Cliente não encontrado!" },
-          { status: 404 }
-        );
-      }
-
-      const nome_banco = clientes[0].nome_banco;
-      const clienteStatus = clientes[0].status; // Status atual do cliente
-
-      if (!nome_banco) {
-        return NextResponse.json(
-          { message: "Banco de dados do cliente não está configurado!" },
-          { status: 500 }
-        );
-      }
-
-      // Gera uma nova chave de acesso se não for fornecida
-      const novaChaveAcesso =
-        chave_acesso || crypto.randomBytes(8).toString("hex").slice(0, 15);
-
-      // Atualiza os dados do cliente na tabela principal
-      const updateClienteQuery = `
-        UPDATE clientes 
-        SET 
-          nome_responsavel = COALESCE(?, nome_responsavel),
-          nome_igreja = COALESCE(?, nome_igreja),
-          email = COALESCE(?, email),
-          cnpj_cpf = COALESCE(?, cnpj_cpf),
-          endereco = COALESCE(?, endereco),
-          chave_acesso = ?
-        WHERE id = ?`;
-      const updateClienteValues = [
-        nome_responsavel,
-        nome_igreja,
-        email,
-        cnpj_cpf,
-        endereco,
-        novaChaveAcesso,
-        id,
-      ];
-
-      await conn.query(updateClienteQuery, updateClienteValues);
-
-      // Se o status foi enviado, atualiza também o status
-      if (status && status !== clienteStatus) {
-        const updateStatusQuery = `
-          UPDATE clientes 
-          SET status = ? 
-          WHERE id = ?`;
-        await conn.query(updateStatusQuery, [status, id]);
-      }
-
-      // Atualiza os dados do usuário no banco de dados do cliente
-      const hashedPassword = senha ? await bcrypt.hash(senha, 10) : null; // Hash da nova senha, se enviada
-
-      const updateUserQuery = `
-        UPDATE ${conn.escapeId(nome_banco)}.usuarios 
-        SET 
-          nome = COALESCE(?, nome),
-          email = COALESCE(?, email),
-          senha = COALESCE(?, senha) 
-        WHERE email = ?`;
-      const updateUserValues = [
-        nome_responsavel,
-        email,
-        hashedPassword, // Atualiza a senha com o hash gerado, se fornecida
-        email,
-      ];
-
-      await conn.query(updateUserQuery, updateUserValues);
-
+    if (!clientes || clientes.length === 0) {
       return NextResponse.json(
-        {
-          message: "Cliente e usuário atualizados com sucesso!",
-          chaveAcesso: novaChaveAcesso,
-        },
-        { status: 200 }
+        { message: "Cliente não encontrado!" },
+        { status: 404 }
       );
-    } catch (error: any) {
-      console.error("Erro ao executar queries:", error);
+    }
+
+    const nome_banco = clientes[0].nome_banco;
+    const clienteStatus = clientes[0].status; // Status atual do cliente
+
+    if (!nome_banco) {
       return NextResponse.json(
-        { message: "Erro ao atualizar o cliente!", error: error.message },
+        { message: "Banco de dados do cliente não está configurado!" },
         { status: 500 }
       );
-    } finally {
-      conn.release();
     }
+
+    // Gera uma nova chave de acesso se não for fornecida
+    const novaChaveAcesso =
+      chave_acesso || crypto.randomBytes(8).toString("hex").slice(0, 15);
+
+    // Atualiza os dados do cliente na tabela principal
+    const updateClienteQuery = `
+      UPDATE clientes 
+      SET 
+        nome_responsavel = COALESCE(?, nome_responsavel),
+        nome_igreja = COALESCE(?, nome_igreja),
+        email = COALESCE(?, email),
+        cnpj_cpf = COALESCE(?, cnpj_cpf),
+        endereco = COALESCE(?, endereco),
+        chave_acesso = ?
+      WHERE id = ?`;
+    const updateClienteValues = [
+      nome_responsavel,
+      nome_igreja,
+      email,
+      cnpj_cpf,
+      endereco,
+      novaChaveAcesso,
+      id,
+    ];
+
+    await conn.query(updateClienteQuery, updateClienteValues);
+
+    // Se o status foi enviado, atualiza também o status
+    if (status && status !== clienteStatus) {
+      const updateStatusQuery = `
+        UPDATE clientes 
+        SET status = ? 
+        WHERE id = ?`;
+      await conn.query(updateStatusQuery, [status, id]);
+    }
+
+    // Atualiza os dados do usuário no banco de dados do cliente
+    const hashedPassword = senha ? await bcrypt.hash(senha, 10) : null; // Hash da nova senha, se enviada
+
+    const updateUserQuery = `
+      UPDATE ${conn.escapeId(nome_banco)}.usuarios 
+      SET 
+        nome = COALESCE(?, nome),
+        email = COALESCE(?, email),
+        senha = COALESCE(?, senha) 
+      WHERE email = ?`;
+    const updateUserValues = [
+      nome_responsavel,
+      email,
+      hashedPassword, // Atualiza a senha com o hash gerado, se fornecida
+      email,
+    ];
+
+    await conn.query(updateUserQuery, updateUserValues);
+
+    return NextResponse.json(
+      {
+        message: "Cliente e usuário atualizados com sucesso!",
+        chaveAcesso: novaChaveAcesso,
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Erro ao processar requisição:", error);
     return NextResponse.json(
       { message: "Erro ao processar a requisição!", error: error.message },
       { status: 500 }
     );
+  } finally {
+    if (conn) {
+      conn.release();
+      console.log("Conexão com o banco de dados liberada.");
+    }
   }
 }
