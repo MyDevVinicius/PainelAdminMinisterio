@@ -101,11 +101,19 @@ const Sidebar = () => {
               Usuários
             </Link>
           </li>
+          <li>
+            <Link
+              href="/notificacoes"
+              className="flex items-center text-lg hover:text-white py-3 px-4 rounded-lg transition transform duration-300 hover:shadow-lg hover:scale-105"
+            >
+              <FaUserShield className="mr-2" />
+              Notificações
+            </Link>
+          </li>
         </ul>
 
         {/* Rodapé */}
         <div className="space-y-4 mt-auto">
-         
           <button
             onClick={handleLogout}
             className="flex items-center w-full text-lg bg-red-500 text-white hover:bg-red-600 py-3 px-4 rounded-lg mt-4 transition transform duration-300 hover:shadow-lg hover:scale-105"
